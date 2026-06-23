@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A personal, low-engagement news headline page.">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none';">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/svg+xml" href="favicon-dark.svg" media="(prefers-color-scheme: dark)">
+  <title>Headline Briefing</title>
+  <style>
+    /* Light/dark follows the OS or browser setting automatically. */
+    :root {
+      --bg: #fafaf8;
+      --ink: #1a1a1a;
+      --ink-soft: #5a5a56;
+      --rule: #ddddd8;
+      --accent: #8a3324;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #18181a;
+        --ink: #ececea;
+        --ink-soft: #9a9a96;
+        --rule: #3a3a3c;
+        --accent: #d98a73;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Georgia, serif;
+    }
+
+    body {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+      line-height: 1.45;
+    }
+
+    header {
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: normal;
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+
+    .meta {
+      font-family: sans-serif;
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      margin-top: 0.35rem;
+    }
+
+    .errors {
+      font-family: sans-serif;
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-top: 0.5rem;
+    }
+
+    nav.tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 1.25rem 0 1.75rem;
+    }
+
+    .tab {
+      font-family: sans-serif;
+      font-size: 0.78rem;
+      text-transform: capitalize;
+      color: var(--ink-soft);
+      background: none;
+      border: 1px solid var(--rule);
+      padding: 0.3rem 0.75rem;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .tab:hover {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+
+    .tab[aria-selected="true"] {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--bg);
+    }
+
+    section.group {
+      margin-bottom: 2.25rem;
+    }
+
+    h2.source-label {
+      font-family: sans-serif;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--ink-soft);
+      margin: 0 0 0.85rem;
+    }
+
+    details.item {
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    details.item:last-child {
+      border-bottom: none;
+    }
+
+    details.item summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.2rem 0.3rem;
+      margin: -0.2rem -0.3rem;
+      border-radius: 3px;
+    }
+
+    details.item summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.item summary:hover {
+      background: var(--rule);
+    }
+
+    .time-line {
+      font-family: sans-serif;
+      font-size: 0.7rem;
+      color: var(--ink-soft);
+      margin-bottom: 0.25rem;
+    }
+
+    h3.headline {
+      font-size: 1.05rem;
+      font-weight: normal;
+      margin: 0;
+    }
+
+    .item-body {
+      padding: 0.6rem 0 0.2rem;
+    }
+
+    details.item:not([open]) .item-body {
+      display: none;
+    }
+
+    p.summary {
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+      margin: 0 0 0.6rem;
+    }
+
+    .url-display {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      color: var(--ink-soft);
+      opacity: 0.75;
+      word-break: break-all;
+      -webkit-user-select: all;
+      user-select: all;
+      margin: 0;
+      padding: 0;
+    }
+
+    .empty-state {
+      font-family: sans-serif;
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 2px solid var(--ink);
+      font-family: sans-serif;
+      font-size: 0.7rem;
+      color: var(--ink-soft);
+      line-height: 1.6;
+    }
+
+    footer a {
+      color: var(--ink-soft);
+    }
+
+    footer a:hover {
+      color: var(--ink);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Headline Briefing</h1>
+    <div class="meta" id="meta">Loading…</div>
+    <div class="errors" id="errors"></div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Categories"></nav>
+
+  <main id="content">
+    <p class="empty-state">Loading headlines…</p>
+  </main>
+
+  <footer>
+    Headlines and summaries are pulled from each publisher's RSS feed periodically, not on page load, and shown unedited
+    except for truncation where necessary. Each source is limited to a recent time window and item count and ordering,
+    <a href="https://github.com/jackhallybone/headline-briefing/blob/main/config.yaml" target="_blank"
+      rel="noopener noreferrer">configured per source</a>.
+    <br>
+    <br>
+    <a href="https://jackhallybone.github.io/" target="_blank" rel="noopener noreferrer">
+      Made by Jack and Claude
+    </a>
+  </footer>
+
+  <script>
+    let allItems = [];
+    let sourceOrder = [];
+    let activeCategory = null;
+
+    function formatRelativeTime(iso) {
+      if (!iso) return '';
+      const then = new Date(iso);
+      if (isNaN(then)) return '';
+      const minutes = Math.round((Date.now() - then) / 60000);
+      if (minutes < 1) return 'just now';
+      if (minutes < 60) return minutes + (minutes === 1 ? ' minute ago' : ' minutes ago');
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+      const days = Math.round(hours / 24);
+      return days + (days === 1 ? ' day ago' : ' days ago');
+    }
+
+    function groupBySource(items) {
+      const groups = new Map();
+      for (const item of items) {
+        const key = item.source || 'Other';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+      }
+
+      const ordered = new Map();
+      for (const source of sourceOrder) {
+        if (groups.has(source)) {
+          ordered.set(source, groups.get(source));
+          groups.delete(source);
+        }
+      }
+      for (const [source, items] of groups) {
+        ordered.set(source, items);
+      }
+      return ordered;
+    }
+
+    function isSafeUrl(url) {
+      if (!url || !/^https?:\/\//i.test(url)) return false;
+      try {
+        return ['http:', 'https:'].includes(new URL(url).protocol);
+      } catch {
+        return false;
+      }
+    }
+
+    function makeUrlDisplay(url) {
+      const p = document.createElement('p');
+      p.className = 'url-display';
+      p.textContent = isSafeUrl(url) ? url : 'Link unavailable';
+      return p;
+    }
+
+    function renderItem(item) {
+      const details = document.createElement('details');
+      details.className = 'item';
+
+      const summary = document.createElement('summary');
+      const timeLine = document.createElement('div');
+      timeLine.className = 'time-line';
+      timeLine.textContent = formatRelativeTime(item.published) || 'Undated';
+      summary.appendChild(timeLine);
+
+      const h3 = document.createElement('h3');
+      h3.className = 'headline';
+      h3.textContent = item.title;
+      summary.appendChild(h3);
+      details.appendChild(summary);
+
+      const body = document.createElement('div');
+      body.className = 'item-body';
+      if (item.summary) {
+        const p = document.createElement('p');
+        p.className = 'summary';
+        p.textContent = item.summary;
+        body.appendChild(p);
+      }
+      body.appendChild(makeUrlDisplay(item.link));
+      details.appendChild(body);
+
+      return details;
+    }
+
+    function renderTabs(categories) {
+      const tabs = document.getElementById('tabs');
+      tabs.innerHTML = '';
+      for (const category of categories) {
+        const btn = document.createElement('button');
+        btn.className = 'tab';
+        btn.type = 'button';
+        btn.textContent = category;
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', String(category === activeCategory));
+        btn.addEventListener('click', () => {
+          activeCategory = category;
+          renderTabs(categories);
+          renderItems();
+        });
+        tabs.appendChild(btn);
+      }
+    }
+
+    function renderItems() {
+      const content = document.getElementById('content');
+      content.innerHTML = '';
+
+      const items = allItems.filter((i) => (i.category || 'Other') === activeCategory);
+      if (!items.length) {
+        const p = document.createElement('p');
+        p.className = 'empty-state';
+        p.textContent = 'No headlines in this category right now.';
+        content.appendChild(p);
+        return;
+      }
+
+      for (const [source, sourceItems] of groupBySource(items)) {
+        const sectionEl = document.createElement('section');
+        sectionEl.className = 'group';
+        const h2 = document.createElement('h2');
+        h2.className = 'source-label';
+        h2.textContent = source;
+        sectionEl.appendChild(h2);
+        for (const item of sourceItems) sectionEl.appendChild(renderItem(item));
+        content.appendChild(sectionEl);
+      }
+    }
+
+    function showEmpty(message) {
+      document.getElementById('tabs').innerHTML = '';
+      const content = document.getElementById('content');
+      content.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'empty-state';
+      p.textContent = message;
+      content.appendChild(p);
+    }
+
+    function render(data) {
+      allItems = data.items || [];
+      sourceOrder = data.sources || [];
+
+      const sourceCount = new Set(allItems.map((i) => i.source)).size;
+      const generated = formatRelativeTime(data.generated_at);
+      document.getElementById('meta').textContent =
+        (generated ? 'Updated ' + generated + ' · ' : '') +
+        allItems.length + ' headlines from ' + sourceCount + ' sources';
+
+      if (data.errors && data.errors.length) {
+        document.getElementById('errors').textContent = 'Some feeds did not load: ' + data.errors.join('; ');
+      }
+
+      if (!allItems.length) {
+        showEmpty('No headlines available right now.');
+        return;
+      }
+
+      const categories = (data.categories && data.categories.length)
+        ? data.categories
+        : [...new Set(allItems.map((i) => i.category || 'Other'))]
+          .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+      activeCategory = categories[0];
+      renderTabs(categories);
+      renderItems();
+    }
+
+    fetch('data/data.json', { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(render)
+      .catch((err) => {
+        document.getElementById('meta').textContent = '';
+        showEmpty('Could not load headlines (' + err.message + ').');
+      });
+  </script>
+
+</body>
+
+</html>
