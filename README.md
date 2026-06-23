@@ -2,7 +2,7 @@
 
 A personal, low-engagement news headline page, *[Headline Briefing](https://jackhallybone.github.io/headline-briefing/)*.
 
-Designed to give "situational awareness" rather than in-depth knowledge, with a low-engagement design, by periodically putting headlines and summaries from RSS feeds. Minimal publisher data is used and not (intentionally) retained longer than needed.
+Designed to give "situational awareness" rather than in-depth knowledge, with a low-engagement design, by periodically fetching headlines and summaries from RSS feeds. Minimal publisher data is saved and it is not (intentionally) retained longer than needed.
 
 :sparkles: "Co-authored" with Claude.
 
