@@ -22,7 +22,6 @@ DATE_ONLY_GRACE_HOURS = (
     24  # extra slack for feeds that give a date with no time (e.g. Nature)
 )
 SAFETY_CAP_PER_FEED = 100  # hard backstop for ingesting the feed before filtering
-SUMMARY_WORD_LIMIT = 50  # truncate summaries for fast skimming
 FETCH_TIMEOUT_SECONDS = 10
 MAX_RESPONSE_BYTES = 5_000_000
 ALLOWED_LINK_SCHEMES = {"http", "https"}  # blocks javascript:, data:, etc.
@@ -87,6 +86,7 @@ def resolve_settings(source: dict, defaults: dict) -> dict:
         "window_hours": source.get("window_hours", defaults["window_hours"]),
         "max_items": source.get("max_items", defaults["max_items"]),
         "order": source.get("order", defaults["order"]),
+        "summary_word_limit": source.get("summary_word_limit", defaults["summary_word_limit"]),
     }
 
 
@@ -120,7 +120,7 @@ def fetch_feed(
             strip_html(
                 getattr(entry, "summary", "") or getattr(entry, "description", "")
             ),
-            SUMMARY_WORD_LIMIT,
+            settings["summary_word_limit"],
         )
         published, is_date_only = parse_published(entry)
         if not title or not link:
@@ -186,6 +186,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default="data/data.json")
     args = parser.parse_args()
+
+    print("Fetching...")
 
     config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
     try:
