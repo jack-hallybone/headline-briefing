@@ -10,7 +10,6 @@
     content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none';">
   <link rel="icon" type="image/svg+xml" href="favicon.svg" media="(prefers-color-scheme: light)">
   <link rel="icon" type="image/svg+xml" href="favicon-dark.svg" media="(prefers-color-scheme: dark)">
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <title>Headline Briefing</title>
   <style>
     /* Light/dark follows the OS or browser setting automatically. */
@@ -228,9 +227,11 @@
 
   <footer>
     Headlines and summaries are pulled from each publisher's RSS feed periodically, not on page load, and shown unedited
-    except for truncation where necessary. Each source is limited to a recent time window and item count and ordering,
+    except for truncation where necessary. Each source is limited to a recent time window and item count. Source limits
+    and display orders are defined in the
     <a href="https://github.com/jackhallybone/headline-briefing/blob/main/config.yaml" target="_blank"
-      rel="noopener noreferrer">configured per source</a>.
+      rel="noopener noreferrer">config file</a>. Feed update rate is defined in the <a href="https://github.com/jackhallybone/headline-briefing/blob/main/config.yaml" target="_blank"
+      rel="noopener noreferrer">deploy file</a>.
     <br>
     <br>
     <a href="https://jackhallybone.github.io/" target="_blank" rel="noopener noreferrer">

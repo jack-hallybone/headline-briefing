@@ -2,9 +2,9 @@ name: Fetch latest headlines and deploy
 
 on:
   schedule:
-    - cron: '0 6 * * *'    # 06:00 UTC
-    - cron: '0 11 * * *'   # 11:00 UTC
-    - cron: '0 16 * * *'   # 16:00 UTC
+    - cron: '13 06 * * *'   # 06:13 UTC (offset from the hour)
+    - cron: '13 11 * * *'   # 11:13 UTC
+    - cron: '13 16 * * *'   # 16:13 UTC
   workflow_dispatch: {}
   push:
     branches: [main]
@@ -15,8 +15,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -42,7 +42,7 @@ jobs:
           mkdir -p build/data
           cp index.html build/
           cp favicon.svg favicon-dark.svg build/
-          python3 fetch.py --out build/data/data.json
+          python fetch.py --out build/data/data.json
 
       - uses: actions/configure-pages@v5
 
