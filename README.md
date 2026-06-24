@@ -1,6 +1,6 @@
 # Headline Briefing
 
-A personal, low-engagement news headline page, *[Headline Briefing](https://jackhallybone.github.io/headline-briefing/)*.
+A personal, low-engagement news headline page, *[Headline Briefing](https://jack-hallybone.github.io/headline-briefing/)*.
 
 Designed to give "situational awareness" rather than in-depth knowledge, with a low-engagement design, by periodically fetching headlines and summaries from RSS feeds. Minimal publisher data is saved and it is not (intentionally) retained longer than needed.
 
