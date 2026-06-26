@@ -27,6 +27,6 @@ sources:
 ## Data
 
 RSS data is fetched periodically based on the UTC `cron` schedule in
-`.github/workflows/fetch.yaml` and filtered based on the settings in `config.yaml`. The intention is to provide a limited "daily headline briefing" rather than a live updating, infinite scroll news site.
+`.github/workflows/deploy.yaml` and filtered based on the settings in `config.yaml`. The intention is to provide a limited "daily headline briefing" rather than a live updating, infinite scroll news site.
 
 Only the minimum filtered data required for the page is saved, and is not retained longer than is necessary (for example by not storing it in the git history).

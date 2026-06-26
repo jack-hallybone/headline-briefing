@@ -5,6 +5,7 @@ Usage: fetch_feeds.py [--out PATH]
 """
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -131,6 +132,9 @@ def fetch_feed(
                 continue
         items.append(
             {
+                # Stable per-article id (hash of the link), so the page can
+                # remember which headlines you've opened.
+                "id": hashlib.sha256(link.encode("utf-8")).hexdigest()[:12],
                 "source": source_name,
                 "category": category,
                 "title": title,

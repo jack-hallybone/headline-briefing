@@ -44,6 +44,13 @@
       font-family: Georgia, serif;
     }
 
+    /* Smooth jump for the "back to top" link, unless reduced motion is preferred. */
+    @media (prefers-reduced-motion: no-preference) {
+      html {
+        scroll-behavior: smooth;
+      }
+    }
+
     body {
       max-width: 640px;
       margin: 0 auto;
@@ -159,6 +166,15 @@
       margin: 0;
     }
 
+    /* Headlines you've already read are clearly faded (hover to restore). */
+    details.item.read summary {
+      opacity: 0.45;
+    }
+
+    details.item.read summary:hover {
+      opacity: 1;
+    }
+
     .item-body {
       padding: 0.6rem 0 0.2rem;
     }
@@ -208,12 +224,26 @@
     footer a:hover {
       color: var(--ink);
     }
+
+    .back-to-top {
+      display: block;
+      width: fit-content;
+      margin: 2.5rem auto 0;
+      font-family: sans-serif;
+      font-size: 1rem;
+      color: var(--ink-soft);
+      text-decoration: none;
+    }
+
+    .back-to-top:hover {
+      color: var(--ink);
+    }
   </style>
 </head>
 
 <body>
 
-  <header>
+  <header id="top">
     <h1>Headline Briefing</h1>
     <div class="meta" id="meta">Loading…</div>
     <div class="errors" id="errors"></div>
@@ -225,6 +255,8 @@
     <p class="empty-state">Loading headlines…</p>
   </main>
 
+  <a class="back-to-top" href="#top">↑</a>
+
   <footer>
     Headlines and summaries are pulled from each publisher's RSS feed periodically, not on page load, and shown unedited
     except for truncation where necessary. Each source is limited to a recent time window and item count. Source limits
@@ -232,6 +264,9 @@
     <a href="https://github.com/jack-hallybone/headline-briefing/blob/main/config.yaml" target="_blank"
       rel="noopener noreferrer">config file</a>. Feed update rate is defined in the <a href="https://github.com/jack-hallybone/headline-briefing/blob/main/.github/workflows/deploy.yaml" target="_blank"
       rel="noopener noreferrer">deploy file</a>.
+    <br>
+    <br>
+    Headlines you open are remembered only in your browser (via localStorage), and forgotten when the feed refreshes.
     <br>
     <br>
     <a href="https://jack-hallybone.github.io/" target="_blank" rel="noopener noreferrer">
@@ -243,6 +278,34 @@
     let allItems = [];
     let sourceOrder = [];
     let activeCategory = null;
+
+    // --- Read tracking ----------------------------------------------------
+    // Remembers which headlines you've opened, in this browser only
+    // (localStorage). Keyed by the feed's generated_at, so the set is
+    // ignored and replaced whenever the feed refreshes — i.e. self-clearing.
+    const READ_KEY = 'read-headlines';
+    let readVersion = null;
+    let readIds = new Set();
+
+    function loadRead(version) {
+      readVersion = version;
+      readIds = new Set();
+      try {
+        const stored = JSON.parse(localStorage.getItem(READ_KEY) || 'null');
+        if (stored && stored.v === version && Array.isArray(stored.ids)) {
+          // Only keep string ids, in case the stored value was tampered with.
+          readIds = new Set(stored.ids.filter((id) => typeof id === 'string'));
+        }
+      } catch { /* storage unavailable or corrupt; start fresh */ }
+    }
+
+    function markRead(id) {
+      if (!id || readIds.has(id)) return;
+      readIds.add(id);
+      try {
+        localStorage.setItem(READ_KEY, JSON.stringify({ v: readVersion, ids: [...readIds] }));
+      } catch { /* storage full or disabled; non-fatal */ }
+    }
 
     function formatRelativeTime(iso) {
       if (!iso) return '';
@@ -297,6 +360,13 @@
     function renderItem(item) {
       const details = document.createElement('details');
       details.className = 'item';
+      if (readIds.has(item.id)) details.classList.add('read');
+      details.addEventListener('toggle', () => {
+        if (!details.open) {
+          markRead(item.id);
+          details.classList.add('read');
+        }
+      });
 
       const summary = document.createElement('summary');
       const timeLine = document.createElement('div');
@@ -381,6 +451,7 @@
     function render(data) {
       allItems = data.items || [];
       sourceOrder = data.sources || [];
+      loadRead(data.generated_at);
 
       const sourceCount = new Set(allItems.map((i) => i.source)).size;
       const generated = formatRelativeTime(data.generated_at);
