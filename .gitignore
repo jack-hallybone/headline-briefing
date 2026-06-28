@@ -1,5 +1,25 @@
+# Fetched feed data and build output — never commit publisher content.
 data/
 build/
+
+# Python
 __pycache__/
+*.py[cod]
+.venv/
 venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environment / secrets
 .env
+.env.*
+!.env.example
+
+# OS and editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

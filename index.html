@@ -19,6 +19,8 @@
       --ink-soft: #5a5a56;
       --rule: #ddddd8;
       --accent: #8a3324;
+      --font-ui: sans-serif;        /* chrome / UI text */
+      --font-body: Georgia, serif;  /* article text */
     }
 
     @media (prefers-color-scheme: dark) {
@@ -41,7 +43,7 @@
       padding: 0;
       background: var(--bg);
       color: var(--ink);
-      font-family: Georgia, serif;
+      font-family: var(--font-body);
     }
 
     /* Smooth jump for the "back to top" link, unless reduced motion is preferred. */
@@ -58,6 +60,32 @@
       line-height: 1.45;
     }
 
+    /* Chrome / UI text is sans-serif (article text stays serif via the body). */
+    .meta,
+    .errors,
+    .tab,
+    .source-label,
+    .time-line,
+    .empty-state,
+    footer,
+    .back-to-top {
+      font-family: var(--font-ui);
+    }
+
+    /* Most chrome text is muted; accent/hover/selected rules below win on specificity. */
+    .meta,
+    .tab,
+    .source-label,
+    .time-line,
+    .summary,
+    .url-display,
+    .empty-state,
+    footer,
+    footer a,
+    .back-to-top {
+      color: var(--ink-soft);
+    }
+
     header {
       border-bottom: 2px solid var(--ink);
       padding-bottom: 0.75rem;
@@ -72,14 +100,11 @@
     }
 
     .meta {
-      font-family: sans-serif;
       font-size: 0.75rem;
-      color: var(--ink-soft);
       margin-top: 0.35rem;
     }
 
     .errors {
-      font-family: sans-serif;
       font-size: 0.75rem;
       color: var(--accent);
       margin-top: 0.5rem;
@@ -93,13 +118,11 @@
     }
 
     .tab {
-      font-family: sans-serif;
-      font-size: 0.78rem;
+      font-size: 0.85rem;
       text-transform: capitalize;
-      color: var(--ink-soft);
       background: none;
       border: 1px solid var(--rule);
-      padding: 0.3rem 0.75rem;
+      padding: 0.35rem 0.85rem;
       cursor: pointer;
       border-radius: 2px;
     }
@@ -119,12 +142,10 @@
       margin-bottom: 2.25rem;
     }
 
-    h2.source-label {
-      font-family: sans-serif;
+    .source-label {
       font-size: 0.8rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: var(--ink-soft);
       margin: 0 0 0.85rem;
     }
 
@@ -154,9 +175,7 @@
     }
 
     .time-line {
-      font-family: sans-serif;
       font-size: 0.7rem;
-      color: var(--ink-soft);
       margin-bottom: 0.25rem;
     }
 
@@ -183,16 +202,14 @@
       display: none;
     }
 
-    p.summary {
+    .summary {
       font-size: 0.92rem;
-      color: var(--ink-soft);
       margin: 0 0 0.6rem;
     }
 
     .url-display {
       font-family: 'Courier New', monospace;
       font-size: 0.72rem;
-      color: var(--ink-soft);
       opacity: 0.75;
       word-break: break-all;
       -webkit-user-select: all;
@@ -202,8 +219,6 @@
     }
 
     .empty-state {
-      font-family: sans-serif;
-      color: var(--ink-soft);
       font-size: 0.9rem;
     }
 
@@ -211,14 +226,8 @@
       margin-top: 3rem;
       padding-top: 1rem;
       border-top: 2px solid var(--ink);
-      font-family: sans-serif;
       font-size: 0.7rem;
-      color: var(--ink-soft);
       line-height: 1.6;
-    }
-
-    footer a {
-      color: var(--ink-soft);
     }
 
     footer a:hover {
@@ -229,9 +238,7 @@
       display: block;
       width: fit-content;
       margin: 2.5rem auto 0;
-      font-family: sans-serif;
       font-size: 1rem;
-      color: var(--ink-soft);
       text-decoration: none;
     }
 
@@ -243,7 +250,7 @@
 
 <body>
 
-  <header id="top">
+  <header>
     <h1>Headline Briefing</h1>
     <div class="meta" id="meta">Loading…</div>
     <div class="errors" id="errors"></div>
@@ -255,7 +262,7 @@
     <p class="empty-state">Loading headlines…</p>
   </main>
 
-  <a class="back-to-top" href="#top">↑</a>
+  <a class="back-to-top" href="#">↑</a>
 
   <footer>
     Headlines and summaries are pulled from each publisher's RSS feed periodically, not on page load, and shown unedited
@@ -278,6 +285,20 @@
     let allItems = [];
     let sourceOrder = [];
     let activeCategory = null;
+
+    // Tiny DOM builder: el('div', { class: 'x', text: 'hi', role: 'tab' }, child, child).
+    // 'text' sets textContent (so feed data is always escaped); any other key becomes
+    // an attribute. Nullish children are skipped.
+    function el(tag, attrs = {}, ...children) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        if (key === 'class') node.className = value;
+        else if (key === 'text') node.textContent = value;
+        else node.setAttribute(key, value);
+      }
+      node.append(...children.filter((child) => child != null));
+      return node;
+    }
 
     // --- Read tracking ----------------------------------------------------
     // Remembers which headlines you've opened, in this browser only
@@ -351,15 +372,20 @@
     }
 
     function makeUrlDisplay(url) {
-      const p = document.createElement('p');
-      p.className = 'url-display';
-      p.textContent = isSafeUrl(url) ? url : 'Link unavailable';
-      return p;
+      return el('p', { class: 'url-display', text: isSafeUrl(url) ? url : 'Link unavailable' });
     }
 
     function renderItem(item) {
-      const details = document.createElement('details');
-      details.className = 'item';
+      const body = el('div', { class: 'item-body' });
+      if (item.summary) body.append(el('p', { class: 'summary', text: item.summary }));
+      body.append(makeUrlDisplay(item.link));
+
+      const details = el('details', { class: 'item' },
+        el('summary', {},
+          el('div', { class: 'time-line', text: formatRelativeTime(item.published) || 'Undated' }),
+          el('h3', { class: 'headline', text: item.title })),
+        body);
+
       if (readIds.has(item.id)) details.classList.add('read');
       details.addEventListener('toggle', () => {
         if (!details.open) {
@@ -367,85 +393,57 @@
           details.classList.add('read');
         }
       });
-
-      const summary = document.createElement('summary');
-      const timeLine = document.createElement('div');
-      timeLine.className = 'time-line';
-      timeLine.textContent = formatRelativeTime(item.published) || 'Undated';
-      summary.appendChild(timeLine);
-
-      const h3 = document.createElement('h3');
-      h3.className = 'headline';
-      h3.textContent = item.title;
-      summary.appendChild(h3);
-      details.appendChild(summary);
-
-      const body = document.createElement('div');
-      body.className = 'item-body';
-      if (item.summary) {
-        const p = document.createElement('p');
-        p.className = 'summary';
-        p.textContent = item.summary;
-        body.appendChild(p);
-      }
-      body.appendChild(makeUrlDisplay(item.link));
-      details.appendChild(body);
-
       return details;
     }
 
     function renderTabs(categories) {
       const tabs = document.getElementById('tabs');
       tabs.innerHTML = '';
+      // No tab bar for a single (or empty) category — it would just be clutter.
+      if (categories.length <= 1) {
+        tabs.style.display = 'none';
+        return;
+      }
+      tabs.style.display = '';
       for (const category of categories) {
-        const btn = document.createElement('button');
-        btn.className = 'tab';
-        btn.type = 'button';
-        btn.textContent = category;
-        btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-selected', String(category === activeCategory));
+        const btn = el('button', {
+          class: 'tab',
+          type: 'button',
+          role: 'tab',
+          'aria-selected': String(category === activeCategory),
+          text: category,
+        });
         btn.addEventListener('click', () => {
           activeCategory = category;
           renderTabs(categories);
           renderItems();
         });
-        tabs.appendChild(btn);
+        tabs.append(btn);
       }
     }
 
     function renderItems() {
       const content = document.getElementById('content');
       content.innerHTML = '';
-
       const items = allItems.filter((i) => (i.category || 'Other') === activeCategory);
       if (!items.length) {
-        const p = document.createElement('p');
-        p.className = 'empty-state';
-        p.textContent = 'No headlines in this category right now.';
-        content.appendChild(p);
+        content.append(el('p', { class: 'empty-state', text: 'No headlines in this category right now.' }));
         return;
       }
-
       for (const [source, sourceItems] of groupBySource(items)) {
-        const sectionEl = document.createElement('section');
-        sectionEl.className = 'group';
-        const h2 = document.createElement('h2');
-        h2.className = 'source-label';
-        h2.textContent = source;
-        sectionEl.appendChild(h2);
-        for (const item of sourceItems) sectionEl.appendChild(renderItem(item));
-        content.appendChild(sectionEl);
+        const section = el('section', { class: 'group' }, el('h2', { class: 'source-label', text: source }));
+        for (const item of sourceItems) section.append(renderItem(item));
+        content.append(section);
       }
     }
 
     function showEmpty(message) {
-      document.getElementById('tabs').innerHTML = '';
+      const tabs = document.getElementById('tabs');
+      tabs.innerHTML = '';
+      tabs.style.display = 'none';
       const content = document.getElementById('content');
       content.innerHTML = '';
-      const p = document.createElement('p');
-      p.className = 'empty-state';
-      p.textContent = message;
-      content.appendChild(p);
+      content.append(el('p', { class: 'empty-state', text: message }));
     }
 
     function render(data) {

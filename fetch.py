@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch RSS feeds from config.yaml, write a flat JSON cache of headlines.
 
-Usage: fetch_feeds.py [--out PATH]
+Usage: fetch.py [--out PATH]
 """
 
 import argparse
@@ -28,6 +28,10 @@ MAX_RESPONSE_BYTES = 5_000_000
 ALLOWED_LINK_SCHEMES = {"http", "https"}  # blocks javascript:, data:, etc.
 USER_AGENT = "Mozilla/5.0 (compatible; RSS reader)"  # some publishers restrict obvious bot UAs
 
+# Used when a source leaves `category` blank or omits it (e.g. a single-tab
+# setup, where one category means the page hides the tab bar entirely).
+DEFAULT_CATEGORY = "General"
+
 TAG_RE = re.compile(r"<[^>]+>")
 
 
@@ -42,6 +46,12 @@ def truncate_words(text: str, limit: int) -> str:
     if len(words) <= limit:
         return text
     return " ".join(words[:limit]) + "…"
+
+
+def source_category(source: dict) -> str:
+    """A source's display category, falling back to DEFAULT_CATEGORY when the
+    config leaves `category` blank or omits it."""
+    return strip_html(source.get("category") or "") or DEFAULT_CATEGORY
 
 
 def safe_link(url: str) -> str | None:
@@ -96,7 +106,7 @@ def category_label_map(sources: list[dict]) -> dict[str, str]:
     "news" and "News" collapse to a single tab. First spelling in config wins."""
     labels: dict[str, str] = {}
     for source in sources:
-        label = strip_html(source["category"])
+        label = source_category(source)
         labels.setdefault(label.lower(), label)
     return labels
 
@@ -160,7 +170,7 @@ def build_cache(config: dict) -> dict:
     items, errors, fetched = [], [], 0
 
     for source in sources:
-        category = labels[strip_html(source["category"]).lower()]
+        category = labels[source_category(source).lower()]
         try:
             feed_items, raw_entry_count = fetch_feed(source, defaults, now, category)
             fetched += 1

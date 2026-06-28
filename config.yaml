@@ -1,11 +1,12 @@
 # Every source inherits these unless it sets its own value below.
-defaults: 
+defaults:
   window_hours: 24        # how far back to look
   max_items: 10           # cap per source, so one busy feed can't dominate
   order: feed             # recent = newest first; feed = keep the feed's own order
   summary_word_limit: 50  # truncate long summaries
 
 sources:
+  # --- News ---
   - source: BBC News
     category: News
     url: https://feeds.bbci.co.uk/news/rss.xml
@@ -14,34 +15,16 @@ sources:
     category: News
     url: https://news.google.com/rss/search?q=site:apnews.com&hl=en-GB&gl=GB&ceid=GB:en
 
-  - source: Reuters (via Google News)
+  - source: Al Jazeera
     category: News
-    url: https://news.google.com/rss/search?q=site:reuters.com&hl=en-GB&gl=GB&ceid=GB:en
+    url: https://www.aljazeera.com/xml/rss/all.xml
 
-  - source: The Guardian
-    category: News
-    url: https://www.theguardian.com/world/rss
-
-  - source: Financial Times
-    category: News
-    url: https://www.ft.com/?format=rss
-
-  - source: Nature
+  # --- Science ---
+  - source: Science News
     category: Science
-    url: https://www.nature.com/nature.rss
+    url: https://www.sciencenews.org/feed
 
-  - source: Royal Society Open Science
-    category: Science
-    url: https://royalsocietypublishing.org/rss/site_1000027/1000016.xml
-
-  - source: Ars Technica
+  # --- Tech ---
+  - source: MIT News
     category: Tech
-    url: https://feeds.arstechnica.com/arstechnica/index
-
-  - source: IEEE Spectrum
-    category: Tech
-    url: https://spectrum.ieee.org/feeds/feed.rss
-
-  - source: MIT Technology Review
-    category: Tech
-    url: https://www.technologyreview.com/feed
+    url: https://news.mit.edu/rss/feed
