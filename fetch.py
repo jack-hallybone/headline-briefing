@@ -19,14 +19,15 @@ import yaml
 
 CONFIG_PATH = Path(__file__).parent / "config.yaml"
 
-DATE_ONLY_GRACE_HOURS = (
-    24  # extra slack for feeds that give a date with no time (e.g. Nature)
-)
 SAFETY_CAP_PER_FEED = 100  # hard backstop for ingesting the feed before filtering
 FETCH_TIMEOUT_SECONDS = 10
 MAX_RESPONSE_BYTES = 5_000_000
 ALLOWED_LINK_SCHEMES = {"http", "https"}  # blocks javascript:, data:, etc.
 USER_AGENT = "Mozilla/5.0 (compatible; RSS reader)"  # some publishers restrict obvious bot UAs
+
+# A source whose url is this is not an RSS feed: it routes to the standalone
+# wikipedia_current_events module instead (imported lazily, only when used).
+WIKIPEDIA_CURRENT_EVENTS_URL = "wikipedia:current-events"
 
 # Used when a source leaves `category` blank or omits it (e.g. a single-tab
 # setup, where one category means the page hides the tab bar entirely).
@@ -60,16 +61,15 @@ def safe_link(url: str) -> str | None:
     return url if scheme in ALLOWED_LINK_SCHEMES else None
 
 
-def parse_published(entry) -> tuple[str, bool]:
-    """Returns (ISO timestamp, is_date_only). is_date_only flags an exact
-    00:00:00 time, which usually means the feed gave a date with no time
-    (see DATE_ONLY_GRACE_HOURS)."""
+def parse_published(entry) -> tuple[datetime | None, bool]:
+    """Parse an entry's time as (datetime, is_date_only), or (None, False) when
+    the feed gives no date at all. is_date_only flags an exact 00:00:00 time,
+    which almost always means the feed gave a date with no time of day."""
     for key in ("published_parsed", "updated_parsed"):
         value = getattr(entry, key, None)
         if value:
-            iso = datetime(*value[:6], tzinfo=timezone.utc).isoformat()
-            return iso, value[3:6] == (0, 0, 0)
-    return "", False
+            return datetime(*value[:6], tzinfo=timezone.utc), value[3:6] == (0, 0, 0)
+    return None, False
 
 
 def fetch_bytes(url: str) -> bytes:
@@ -116,7 +116,6 @@ def fetch_feed(
 ) -> tuple[list[dict], int]:
     settings = resolve_settings(source, defaults)
     cutoff = now - timedelta(hours=settings["window_hours"])
-    date_only_cutoff = cutoff - timedelta(hours=DATE_ONLY_GRACE_HOURS)
     source_name = strip_html(source["source"])
 
     raw = fetch_bytes(source["url"])
@@ -127,19 +126,29 @@ def fetch_feed(
     for entry in parsed.entries[:SAFETY_CAP_PER_FEED]:
         title = strip_html(getattr(entry, "title", ""))
         link = safe_link(getattr(entry, "link", ""))
+        if not title or not link:
+            continue
         summary = truncate_words(
             strip_html(
                 getattr(entry, "summary", "") or getattr(entry, "description", "")
             ),
             settings["summary_word_limit"],
         )
-        published, is_date_only = parse_published(entry)
-        if not title or not link:
-            continue
-        if published:
-            effective_cutoff = date_only_cutoff if is_date_only else cutoff
-            if datetime.fromisoformat(published) < effective_cutoff:
+
+        published_dt, is_date_only = parse_published(entry)
+        if published_dt is not None:
+            # A date with no time of day is set to the end of the day
+            latest_possible = (
+                published_dt + timedelta(days=1) if is_date_only else published_dt
+            )
+            if latest_possible < cutoff:
                 continue
+            # Never record a future time, clamp to fetch time
+            published = min(published_dt, now).isoformat()
+        else:
+            # No date at all: keep it, but leave it Undated rather than guess.
+            published = ""
+
         items.append(
             {
                 # Stable per-article id (hash of the link), so the page can
@@ -172,7 +181,14 @@ def build_cache(config: dict) -> dict:
     for source in sources:
         category = labels[source_category(source).lower()]
         try:
-            feed_items, raw_entry_count = fetch_feed(source, defaults, now, category)
+            if source.get("url") == WIKIPEDIA_CURRENT_EVENTS_URL:
+                import fetch_wiki_current_events  # lazy: only imported when configured
+
+                feed_items, raw_entry_count = fetch_wiki_current_events.fetch_feed(
+                    source, defaults, now, category
+                )
+            else:
+                feed_items, raw_entry_count = fetch_feed(source, defaults, now, category)
             fetched += 1
             if not raw_entry_count:
                 errors.append(f"{source['source']}: no items found")

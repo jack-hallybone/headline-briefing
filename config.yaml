@@ -28,3 +28,8 @@ sources:
   - source: MIT News
     category: Tech
     url: https://news.mit.edu/rss/feed
+
+  # --- Wikipedia Current Events (not an RSS feed) ---
+  - source: Wikipedia Current Events
+    category: Wikipedia
+    url: wikipedia:current-events
