@@ -1,10 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    /* One icon for both themes: ink colour follows the OS/browser setting. */
+    svg { color: #1a1a1a; }
+    @media (prefers-color-scheme: dark) { svg { color: #ececea; } }
+  </style>
   <g transform="translate(-3.977 -5.288) scale(1.31)">
-    <g fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
       <path d="M7 9 H25 V23.5 a1.5 1.5 0 0 1 -1.5 1.5 H8.5 A1.5 1.5 0 0 1 7 23.5 Z"/>
       <path d="M7 23.5 a1.5 1.5 0 0 1 -1.5 -1.5 V12 H7"/>
     </g>
-    <g fill="#1a1a1a">
+    <g fill="currentColor">
       <rect x="9.5" y="12" width="7" height="5" rx="0.4"/>
       <rect x="18" y="12" width="4.5" height="1.4" rx="0.3"/>
       <rect x="18" y="15" width="4.5" height="1.4" rx="0.3"/>

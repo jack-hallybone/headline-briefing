@@ -10,6 +10,8 @@ Designed to give "situational awareness" rather than in-depth knowledge, with a 
 
 Everything is set in `config.yaml`. The `defaults` block defines how source data should be filtered and ordered. The `sources` block lists each source name (`source`), RSS feed `url` and `category` for grouping. Each source can individually overwrite the default parameters.
 
+A source can also use `url: wikipedia:current-events` to pull Wikipedia's Current Events portal instead of an RSS feed.
+
 ```yaml
 defaults:
   window_hours: 24        # how far back to look

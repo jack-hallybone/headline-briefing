@@ -17,8 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Fetches untrusted feed content, so it runs read-only with no deploy or OIDC
-  # token. Its only output is the Pages artifact.
+  # Runs the tests, then fetches untrusted feed content -- so a failing test
+  # aborts the build and the deploy job never runs (the last good site stays).
+  # Read-only, with no deploy or OIDC token; its only output is the Pages artifact.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -36,11 +37,17 @@ jobs:
       - name: Install pinned dependencies
         run: pip install -r requirements.txt
 
+      - name: Byte-compile sources
+        run: python -m py_compile fetch.py fetch_wiki_current_events.py
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -t .
+
       - name: Fetch feeds into a fresh build directory
         run: |
           mkdir -p build/data
           cp index.html app.js build/
-          cp favicon.svg favicon-dark.svg build/
+          cp favicon.svg build/
           python fetch.py --out build/data/data.json
 
       - uses: actions/upload-pages-artifact@v3
