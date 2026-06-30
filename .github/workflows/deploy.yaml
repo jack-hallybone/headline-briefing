@@ -9,22 +9,21 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# No workflow-wide privileges: each job is granted only what it needs (below).
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  # Fetches untrusted feed content, so it runs read-only with no deploy or OIDC
+  # token. Its only output is the Pages artifact.
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -44,12 +43,25 @@ jobs:
           cp favicon.svg favicon-dark.svg build/
           python fetch.py --out build/data/data.json
 
-      - uses: actions/configure-pages@v5
-
       - uses: actions/upload-pages-artifact@v3
         with:
           path: 'build'
           retention-days: 1
+
+  # Deploys the trusted artifact only — it never runs feed-fetching code, so the
+  # pages-write and OIDC permissions are isolated from that surface.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
 
       - id: deployment
         uses: actions/deploy-pages@v4

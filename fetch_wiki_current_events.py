@@ -25,7 +25,7 @@ unreachable day is skipped, not fatal.
 
 Run directly to print the current and previous day:
 
-    python wikipedia_current_events.py
+    python fetch_wiki_current_events.py
 """
 from __future__ import annotations
 

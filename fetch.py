@@ -26,7 +26,7 @@ ALLOWED_LINK_SCHEMES = {"http", "https"}  # blocks javascript:, data:, etc.
 USER_AGENT = "Mozilla/5.0 (compatible; RSS reader)"  # some publishers restrict obvious bot UAs
 
 # A source whose url is this is not an RSS feed: it routes to the standalone
-# wikipedia_current_events module instead (imported lazily, only when used).
+# fetch_wiki_current_events module instead (imported lazily, only when used).
 WIKIPEDIA_CURRENT_EVENTS_URL = "wikipedia:current-events"
 
 # Used when a source leaves `category` blank or omits it (e.g. a single-tab
@@ -137,7 +137,7 @@ def fetch_feed(
 
         published_dt, is_date_only = parse_published(entry)
         if published_dt is not None:
-            # A date with no time of day is set to the end of the day
+            # A date with no time of day is read as end-of-day for the window check
             latest_possible = (
                 published_dt + timedelta(days=1) if is_date_only else published_dt
             )
