@@ -2,6 +2,10 @@ let allItems = [];
 let sourceOrder = [];
 let activeCategory = null;
 
+// A virtual tab (not a real category) that shows the unread items from every
+// category at once — for coming back later to see what you haven't read.
+const UNREAD_TAB = 'Unread';
+
 // Tiny DOM builder: el('div', { class: 'x', text: 'hi', role: 'tab' }, child, child).
 // 'text' sets textContent (so feed data is always escaped); any other key becomes
 // an attribute. Nullish children are skipped.
@@ -150,9 +154,14 @@ function renderTabs(categories) {
 function renderItems() {
   const content = document.getElementById('content');
   content.innerHTML = '';
-  const items = allItems.filter((i) => (i.category || 'Other') === activeCategory);
+  const items = activeCategory === UNREAD_TAB
+    ? allItems.filter((i) => !readIds.has(i.id))
+    : allItems.filter((i) => (i.category || 'Other') === activeCategory);
   if (!items.length) {
-    content.append(el('p', { class: 'empty-state', text: 'No headlines in this category right now.' }));
+    const message = activeCategory === UNREAD_TAB
+      ? "No unread headlines — you're all caught up."
+      : 'No headlines in this category right now.';
+    content.append(el('p', { class: 'empty-state', text: message }));
     return;
   }
   for (const [source, sourceItems] of groupBySource(items)) {
@@ -195,8 +204,11 @@ function render(data) {
     ? data.categories
     : [...new Set(allItems.map((i) => i.category || 'Other'))]
       .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-  activeCategory = categories[0];
-  renderTabs(categories);
+  activeCategory = categories[0];  // default landing stays the first category
+  // Prepend an "Unread" tab when there's a tab bar to add it to (more than one
+  // real category). It's leftmost but not the default view.
+  const tabList = categories.length > 1 ? [UNREAD_TAB, ...categories] : categories;
+  renderTabs(tabList);
   renderItems();
 }
 
