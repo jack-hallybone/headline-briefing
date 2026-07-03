@@ -186,7 +186,7 @@ def recent_events(
 
 def fetch_feed(
     source: dict, defaults: dict, now: datetime, category: str
-) -> tuple[list[dict], int]:
+) -> list[dict]:
     """Drop-in for fetch.py's ``fetch_feed`` behind the config sentinel.
 
     Emits items in the RSS item shape (id / source / category / title / summary
@@ -226,7 +226,7 @@ def fetch_feed(
                 "published": f"{event['date']}T00:00:00+00:00",
             }
         )
-    return items, len(events)
+    return items
 
 
 def main() -> int:

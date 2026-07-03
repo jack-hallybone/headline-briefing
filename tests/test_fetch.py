@@ -103,7 +103,7 @@ class ParsePublishedTests(unittest.TestCase):
 
 class WindowFilterTests(unittest.TestCase):
     def titles(self, entries, **kw):
-        items, _ = run_feed(entries, **kw)
+        items = run_feed(entries, **kw)
         return {i["title"] for i in items}
 
     def test_full_timestamps_inside_and_outside_window(self):
@@ -127,34 +127,33 @@ class WindowFilterTests(unittest.TestCase):
         self.assertEqual(kept, {"today", "yesterday"})
 
     def test_undated_kept_and_blank(self):
-        items, _ = run_feed([entry("undated")])
+        items = run_feed([entry("undated")])
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["published"], "")
 
     def test_future_timestamp_clamped_to_now(self):
-        items, _ = run_feed([entry("future", published_parsed=struct(2026, 6, 28, 10, 0))])
+        items = run_feed([entry("future", published_parsed=struct(2026, 6, 28, 10, 0))])
         self.assertEqual(items[0]["published"], NOW.isoformat())
 
 
 class ShapeAndOrderTests(unittest.TestCase):
     def test_item_shape(self):
-        items, raw = run_feed([entry("A", published_parsed=struct(2026, 6, 28, 5))])
-        self.assertEqual(raw, 1)
+        items = run_feed([entry("A", published_parsed=struct(2026, 6, 28, 5))])
         self.assertEqual(
             set(items[0]), {"id", "source", "category", "title", "summary", "link", "published"}
         )
 
     def test_invalid_entries_dropped(self):
-        items, raw = run_feed([
+        items = run_feed([
             entry(title="bad-link", link="javascript:x", published_parsed=struct(2026, 6, 28, 5)),
             entry(title="", link="https://x/2", published_parsed=struct(2026, 6, 28, 5)),
         ])
-        self.assertEqual((len(items), raw), (0, 2))
+        self.assertEqual(len(items), 0)
 
     def test_max_items_caps_output(self):
         entries = [entry(f"e{n}", link=f"https://x/{n}", published_parsed=struct(2026, 6, 28, 5))
                    for n in range(20)]
-        items, _ = run_feed(entries, defaults={**DEFAULTS, "max_items": 5})
+        items = run_feed(entries, defaults={**DEFAULTS, "max_items": 5})
         self.assertEqual(len(items), 5)
 
     def test_recent_order_sorts_newest_first(self):
@@ -162,8 +161,45 @@ class ShapeAndOrderTests(unittest.TestCase):
             entry("old", link="https://x/1", published_parsed=struct(2026, 6, 28, 1)),
             entry("new", link="https://x/2", published_parsed=struct(2026, 6, 28, 6)),
         ]
-        items, _ = run_feed(entries, defaults={**DEFAULTS, "order": "recent"})
+        items = run_feed(entries, defaults={**DEFAULTS, "order": "recent"})
         self.assertEqual([i["title"] for i in items], ["new", "old"])
+
+
+class BuildCacheErrorTests(unittest.TestCase):
+    """A source that fetches fine but returns nothing is not an error; only a
+    real fetch/parse failure (an exception) is."""
+
+    def _build(self, stub, sources):
+        orig = fetch.fetch_feed
+        fetch.fetch_feed = stub
+        try:
+            return fetch.build_cache({"defaults": DEFAULTS, "sources": sources})
+        finally:
+            fetch.fetch_feed = orig
+
+    def test_empty_but_successful_source_is_not_an_error(self):
+        cache = self._build(
+            lambda *a, **k: [],
+            [{"source": "Quiet", "category": "News", "url": "https://x/feed"}],
+        )
+        self.assertEqual(cache["errors"], [])
+        self.assertEqual(cache["items"], [])
+
+    def test_real_failure_is_reported_but_other_sources_survive(self):
+        def stub(source, *a, **k):
+            if source["source"] == "Broken":
+                raise ValueError("kaboom")
+            return [{"id": "1", "source": "Fine", "category": "News", "title": "t",
+                     "summary": "", "link": "https://x/b/1", "published": ""}]
+
+        cache = self._build(stub, [
+            {"source": "Broken", "category": "News", "url": "https://x/a"},
+            {"source": "Fine", "category": "News", "url": "https://x/b"},
+        ])
+        self.assertEqual(len(cache["errors"]), 1)
+        self.assertIn("Broken", cache["errors"][0])
+        self.assertIn("kaboom", cache["errors"][0])
+        self.assertEqual(len(cache["items"]), 1)
 
 
 if __name__ == "__main__":

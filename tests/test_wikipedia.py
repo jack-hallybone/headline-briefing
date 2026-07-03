@@ -103,8 +103,8 @@ class FetchFeedTests(unittest.TestCase):
         return wce.fetch_feed(source, defaults, now, "Wikipedia")
 
     def test_item_shape_and_constants(self):
-        items, raw = self.fetch()
-        self.assertEqual(raw, 3)
+        items = self.fetch()
+        self.assertEqual(len(items), 3)
         for item in items:
             self.assertEqual(
                 set(item), {"id", "source", "category", "title", "summary", "link", "published"}
@@ -114,17 +114,17 @@ class FetchFeedTests(unittest.TestCase):
             self.assertEqual(item["category"], "Wikipedia")
 
     def test_section_becomes_source(self):
-        items, _ = self.fetch()
+        items = self.fetch()
         self.assertEqual(items[0]["source"], "Armed conflicts and attacks")
         self.assertEqual(items[-1]["source"], "Politics and elections")
 
     def test_ids_unique_despite_identical_links(self):
-        items, _ = self.fetch()
+        items = self.fetch()
         ids = [i["id"] for i in items]
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_max_items_caps_per_section(self):
-        items, _ = self.fetch(max_items=1)
+        items = self.fetch(max_items=1)
         per_section = {}
         for i in items:
             per_section[i["source"]] = per_section.get(i["source"], 0) + 1

@@ -113,14 +113,13 @@ def category_label_map(sources: list[dict]) -> dict[str, str]:
 
 def fetch_feed(
     source: dict, defaults: dict, now: datetime, category: str
-) -> tuple[list[dict], int]:
+) -> list[dict]:
     settings = resolve_settings(source, defaults)
     cutoff = now - timedelta(hours=settings["window_hours"])
     source_name = strip_html(source["source"])
 
     raw = fetch_bytes(source["url"])
     parsed = feedparser.parse(raw)  # sanitize_html=True by default
-    raw_entry_count = len(parsed.entries)
 
     items = []
     for entry in parsed.entries[:SAFETY_CAP_PER_FEED]:
@@ -167,7 +166,7 @@ def fetch_feed(
     if settings["order"] == "recent":
         items.sort(key=lambda i: i["published"] or "", reverse=True)
 
-    return items[: settings["max_items"]], raw_entry_count
+    return items[: settings["max_items"]]
 
 
 def build_cache(config: dict) -> dict:
@@ -184,14 +183,15 @@ def build_cache(config: dict) -> dict:
             if source.get("url") == WIKIPEDIA_CURRENT_EVENTS_URL:
                 import fetch_wiki_current_events  # lazy: only imported when configured
 
-                feed_items, raw_entry_count = fetch_wiki_current_events.fetch_feed(
+                feed_items = fetch_wiki_current_events.fetch_feed(
                     source, defaults, now, category
                 )
             else:
-                feed_items, raw_entry_count = fetch_feed(source, defaults, now, category)
+                feed_items = fetch_feed(source, defaults, now, category)
+            # A source that fetches fine but has nothing to show (e.g. today's
+            # Wikipedia page isn't published yet) is a valid empty result, not
+            # an error -- only an actual fetch/parse failure (caught below) is.
             fetched += 1
-            if not raw_entry_count:
-                errors.append(f"{source['source']}: no items found")
             items.extend(feed_items)
         except Exception as exc:  # one bad feed shouldn't kill the run
             errors.append(f"{source['source']}: {exc}")
