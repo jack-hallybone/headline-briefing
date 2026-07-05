@@ -244,6 +244,13 @@
     .back-to-top:hover {
       color: var(--ink);
     }
+
+    /* Which build is live — repo is public, so the short SHA is safe to show. */
+    .build-info {
+      margin-top: 1.5rem;
+      font-size: 0.65rem;
+      opacity: 0.7;
+    }
   </style>
 </head>
 
@@ -278,6 +285,7 @@
     <a href="https://jack-hallybone.github.io/" target="_blank" rel="noopener noreferrer">
       Made by Jack and Claude
     </a>
+    <div class="build-info" id="build-info"></div>
   </footer>
 
   <script src="app.js"></script>

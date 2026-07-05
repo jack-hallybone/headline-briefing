@@ -58,10 +58,14 @@ function markRead(id) {
   persistRead();
 }
 
+function parseIso(iso) {
+  const d = new Date(iso || '');
+  return isNaN(d) ? null : d;
+}
+
 function formatRelativeTime(iso) {
-  if (!iso) return '';
-  const then = new Date(iso);
-  if (isNaN(then)) return '';
+  const then = parseIso(iso);
+  if (!then) return '';
   const minutes = Math.round((Date.now() - then) / 60000);
   if (minutes < 1) return 'just now';
   if (minutes < 60) return minutes + (minutes === 1 ? ' minute ago' : ' minutes ago');
@@ -180,10 +184,26 @@ function showEmpty(message) {
   content.append(el('p', { class: 'empty-state', text: message }));
 }
 
+function formatBuildTime(iso) {
+  const d = parseIso(iso);
+  return d ? d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : '';
+}
+
+function renderBuildInfo(data) {
+  const box = document.getElementById('build-info');
+  if (!box) return;
+  const stamp = formatBuildTime(data.generated_at || '');
+  // Only a real hex commit hash is shown (defence-in-depth on feed data).
+  const commit = /^[0-9a-f]{7,40}$/i.test(data.commit || '') ? data.commit : '';
+  const parts = [stamp, commit].filter(Boolean);
+  box.textContent = parts.length ? 'v ' + parts.join(' | ') : '';
+}
+
 function render(data) {
   allItems = data.items || [];
   sourceOrder = data.sources || [];
   loadRead(allItems);
+  renderBuildInfo(data);
 
   const sourceCount = new Set(allItems.map((i) => i.source)).size;
   const generated = formatRelativeTime(data.generated_at);

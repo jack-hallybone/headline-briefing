@@ -1,12 +1,14 @@
 """Unit tests for fetch.py: sanitising, link safety, date parsing and the
 time-window filtering. No network -- feedparser and the HTTP fetch are stubbed.
 """
+import os
 import sys
 import time
 import types
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -40,6 +42,16 @@ def run_feed(entries, *, now=NOW, defaults=None, category="News", source=None):
         return fetch.fetch_feed(source, defaults, now, category)
     finally:
         fetch.fetch_bytes, fetch.feedparser = orig_bytes, orig_fp
+
+
+def run_build_cache(stub, sources, defaults=None):
+    """Run fetch.build_cache with fetch.fetch_feed replaced by stub."""
+    orig = fetch.fetch_feed
+    fetch.fetch_feed = stub
+    try:
+        return fetch.build_cache({"defaults": defaults or DEFAULTS, "sources": sources})
+    finally:
+        fetch.fetch_feed = orig
 
 
 class SanitiseTests(unittest.TestCase):
@@ -169,16 +181,8 @@ class BuildCacheErrorTests(unittest.TestCase):
     """A source that fetches fine but returns nothing is not an error; only a
     real fetch/parse failure (an exception) is."""
 
-    def _build(self, stub, sources):
-        orig = fetch.fetch_feed
-        fetch.fetch_feed = stub
-        try:
-            return fetch.build_cache({"defaults": DEFAULTS, "sources": sources})
-        finally:
-            fetch.fetch_feed = orig
-
     def test_empty_but_successful_source_is_not_an_error(self):
-        cache = self._build(
+        cache = run_build_cache(
             lambda *a, **k: [],
             [{"source": "Quiet", "category": "News", "url": "https://x/feed"}],
         )
@@ -192,7 +196,7 @@ class BuildCacheErrorTests(unittest.TestCase):
             return [{"id": "1", "source": "Fine", "category": "News", "title": "t",
                      "summary": "", "link": "https://x/b/1", "published": ""}]
 
-        cache = self._build(stub, [
+        cache = run_build_cache(stub, [
             {"source": "Broken", "category": "News", "url": "https://x/a"},
             {"source": "Fine", "category": "News", "url": "https://x/b"},
         ])
@@ -200,6 +204,24 @@ class BuildCacheErrorTests(unittest.TestCase):
         self.assertIn("Broken", cache["errors"][0])
         self.assertIn("kaboom", cache["errors"][0])
         self.assertEqual(len(cache["items"]), 1)
+
+
+class BuildInfoTests(unittest.TestCase):
+    SOURCES = [{"source": "Quiet", "category": "News", "url": "https://x/feed"}]
+
+    def _build(self):
+        return run_build_cache(lambda *a, **k: [], self.SOURCES)
+
+    def test_commit_from_github_sha_is_shortened(self):
+        with mock.patch.dict(os.environ, {"GITHUB_SHA": "0123456789abcdef0123456789abcdef01234567"}):
+            cache = self._build()
+        self.assertEqual(cache["commit"], "0123456")
+
+    def test_commit_empty_without_env(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GITHUB_SHA", None)
+            cache = self._build()
+        self.assertEqual(cache["commit"], "")
 
 
 if __name__ == "__main__":

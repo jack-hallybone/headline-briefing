@@ -7,6 +7,7 @@ Usage: fetch.py [--out PATH]
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
@@ -201,6 +202,9 @@ def build_cache(config: dict) -> dict:
 
     return {
         "generated_at": now.isoformat(),
+        # The deployed commit, for the "what's live" footer. GitHub Actions sets
+        # GITHUB_SHA; empty on a local build. Public repo, so it's safe to show.
+        "commit": os.environ.get("GITHUB_SHA", "")[:7],
         "categories": sorted(
             labels.values(), key=str.lower
         ),  # tabs: alphabetical, first is the default
