@@ -210,7 +210,10 @@ class BuildInfoTests(unittest.TestCase):
     SOURCES = [{"source": "Quiet", "category": "News", "url": "https://x/feed"}]
 
     def _build(self):
-        return run_build_cache(lambda *a, **k: [], self.SOURCES)
+        # commit_datetime() shells out to git; stubbed so these tests don't
+        # depend on whatever repo state happens to surround the test run.
+        with mock.patch.object(fetch, "commit_datetime", return_value=""):
+            return run_build_cache(lambda *a, **k: [], self.SOURCES)
 
     def test_commit_from_github_sha_is_shortened(self):
         with mock.patch.dict(os.environ, {"GITHUB_SHA": "0123456789abcdef0123456789abcdef01234567"}):
@@ -222,6 +225,29 @@ class BuildInfoTests(unittest.TestCase):
             os.environ.pop("GITHUB_SHA", None)
             cache = self._build()
         self.assertEqual(cache["commit"], "")
+
+    def test_commit_at_uses_commit_datetime(self):
+        with mock.patch.object(fetch, "commit_datetime", return_value="2026-06-28T09:00:00+00:00"):
+            cache = run_build_cache(lambda *a, **k: [], self.SOURCES)
+        self.assertEqual(cache["commit_at"], "2026-06-28T09:00:00+00:00")
+
+
+class CommitDatetimeTests(unittest.TestCase):
+    def test_normalises_git_output_to_utc_iso(self):
+        fake_result = mock.Mock(stdout="2026-06-28T10:30:00+02:00\n")
+        with mock.patch.object(fetch.subprocess, "run", return_value=fake_result):
+            self.assertEqual(fetch.commit_datetime(), "2026-06-28T08:30:00+00:00")
+
+    def test_empty_when_git_unavailable(self):
+        with mock.patch.object(fetch.subprocess, "run", side_effect=FileNotFoundError):
+            self.assertEqual(fetch.commit_datetime(), "")
+
+    def test_empty_when_no_commits(self):
+        with mock.patch.object(
+            fetch.subprocess, "run",
+            side_effect=fetch.subprocess.CalledProcessError(128, "git"),
+        ):
+            self.assertEqual(fetch.commit_datetime(), "")
 
 
 if __name__ == "__main__":

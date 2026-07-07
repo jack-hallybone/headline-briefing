@@ -192,7 +192,9 @@ function formatBuildTime(iso) {
 function renderBuildInfo(data) {
   const box = document.getElementById('build-info');
   if (!box) return;
-  const stamp = formatBuildTime(data.generated_at || '');
+  // Commit datetime, not fetch time -- a cron re-fetch runs the same code,
+  // so it shouldn't look like a new "version".
+  const stamp = formatBuildTime(data.commit_at || '');
   // Only a real hex commit hash is shown (defence-in-depth on feed data).
   const commit = /^[0-9a-f]{7,40}$/i.test(data.commit || '') ? data.commit : '';
   const parts = [stamp, commit].filter(Boolean);

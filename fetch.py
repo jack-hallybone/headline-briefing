@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from html import unescape
@@ -100,6 +101,26 @@ def resolve_settings(source: dict, defaults: dict) -> dict:
         "order": source.get("order", defaults["order"]),
         "summary_word_limit": source.get("summary_word_limit", defaults["summary_word_limit"]),
     }
+
+
+def commit_datetime() -> str:
+    """ISO 8601 UTC timestamp of the checked-out commit, for the footer's
+    "version" display. Empty when git is unavailable (e.g. a build outside a
+    git checkout) -- this is about which commit's code is live, not when the
+    data was last fetched (that's `generated_at`; the cron re-fetch runs the
+    same code, so it shouldn't look like a new "version")."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%cI"],
+            cwd=Path(__file__).parent,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True,
+        )
+        return datetime.fromisoformat(result.stdout.strip()).astimezone(timezone.utc).isoformat()
+    except Exception:
+        return ""
 
 
 def category_label_map(sources: list[dict]) -> dict[str, str]:
@@ -205,6 +226,7 @@ def build_cache(config: dict) -> dict:
         # The deployed commit, for the "what's live" footer. GitHub Actions sets
         # GITHUB_SHA; empty on a local build. Public repo, so it's safe to show.
         "commit": os.environ.get("GITHUB_SHA", "")[:7],
+        "commit_at": commit_datetime(),
         "categories": sorted(
             labels.values(), key=str.lower
         ),  # tabs: alphabetical, first is the default
