@@ -4,7 +4,7 @@ A personal, low-engagement news headline page, *[Headline Briefing](https://jack
 
 Designed to give "situational awareness" rather than in-depth knowledge, with a low-engagement design, by periodically fetching headlines and summaries from RSS feeds. Minimal publisher data is saved and it is not (intentionally) retained longer than needed.
 
-:sparkles: "Co-authored" with Claude.
+:sparkles: Made with Claude Code.
 
 ## Config
 
