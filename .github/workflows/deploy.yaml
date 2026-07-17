@@ -46,7 +46,7 @@ jobs:
       - name: Fetch feeds into a fresh build directory
         run: |
           mkdir -p build/data
-          cp index.html app.js build/
+          cp index.html app.js sw.js manifest.json build/
           cp favicon.svg build/
           python fetch.py --out build/data/data.json
 

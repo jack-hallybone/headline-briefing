@@ -234,13 +234,60 @@ function render(data) {
   renderItems();
 }
 
-fetch('data/data.json', { cache: 'no-store' })
-  .then((res) => {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
+const DATA_URL = 'data/data.json';
+const DATA_CACHE = 'headline-briefing-data-v1';
+const DATA_TIMEOUT_MS = 3000;
+const DATA_HARD_LIMIT_MS = 20000;
+
+function validateDataResponse(res) {
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('unexpected content-type: ' + contentType);
+  }
+  return res;
+}
+
+async function fetchData() {
+  const controller = new AbortController();
+  const hardLimit = setTimeout(() => controller.abort(), DATA_HARD_LIMIT_MS);
+  try {
+    const res = await fetch(DATA_URL, { cache: 'no-store', signal: controller.signal });
+    return validateDataResponse(res);
+  } finally {
+    clearTimeout(hardLimit);
+  }
+}
+
+async function loadData() {
+  const cache = 'caches' in window ? await caches.open(DATA_CACHE).catch(() => null) : null;
+  const networkFetch = fetchData().then((res) => {
+    if (cache) cache.put(DATA_URL, res.clone()).catch(() => {});
+    return res;
+  });
+
+  if (!cache) return networkFetch;
+
+  const cached = await cache.match(DATA_URL);
+  if (!cached) return networkFetch;
+
+  const timeout = new Promise((resolve) => setTimeout(resolve, DATA_TIMEOUT_MS, null));
+  const winner = await Promise.race([networkFetch.catch(() => null), timeout]);
+  if (winner) return winner;
+  networkFetch.catch(() => {}); // let it keep running to refresh the cache; ignore late failure
+  return cached;
+}
+
+loadData()
+  .then((res) => res.json())
   .then(render)
   .catch((err) => {
     document.getElementById('meta').textContent = '';
     showEmpty('Could not load headlines (' + err.message + ').');
   });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* non-fatal: app still works without it */ });
+  });
+}
